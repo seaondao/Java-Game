@@ -25,7 +25,10 @@ public class TView extends View {
 
     //Below here is test variables
 
-    private Chip chip1;
+//    private Chip chip1;
+
+    private Chip[] darkChips;
+    private Chip[] lightChips;
     private Cell[][] cells;
 
     private float bgBottom;
@@ -88,7 +91,7 @@ public class TView extends View {
             yWidth = (h*0.8f)/10f; //30px
 
             //DO i even needs these cells?
-            cells = new Cell[9][10]; // 9 10 or 10 9 ?
+            cells = new Cell[9][10]; //9 X and 10Y.
 
             for (int x = 0; x < 9; x++) {
                 //Going throw EACH ROW
@@ -114,11 +117,12 @@ public class TView extends View {
                     cells[x][y] = new Cell(x, y, rectF, color);
                 }
             }
-            chip1 = new Chip(0,cells[0][0],false);
+
 
 
         }
 
+//            chip1 = new Chip(0,cells[0][0],true);
         float bgLeft = 0;
         float bgTop = 0;
         bgBottom = (float)(h*0.8);
@@ -126,10 +130,10 @@ public class TView extends View {
 
 
 
+
+
         //**back groud*/
         c.drawRect(bgLeft,bgTop, w,bgBottom,bg);
-
-
         //**Variables for -----XY lines----*/
         float startX = 0;
         float startY = 0;
@@ -152,7 +156,25 @@ public class TView extends View {
 
         }
 
-        chip1.draw(c);
+
+        //Making and drawing Chips
+        darkChips = new Chip[9];
+        lightChips =new Chip[9];
+        boolean power;
+        for (int i = 0; i<9;i++){
+            power = false;
+            if(i==4){
+                power = true;
+            }
+            darkChips[i] = new Chip(1,cells[i][i],power);
+            lightChips[i] = new Chip(0,cells[i][i+1],power);
+
+            darkChips[i].draw(c);
+            lightChips[i].draw(c);
+
+        }
+
+//        chip1.draw(c);
 
 
     }
