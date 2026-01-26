@@ -11,6 +11,8 @@ public class Chip {
     private boolean power;
     private Cell cell;
 
+    private float size;
+
 
     static {
         fillColor = new Paint();
@@ -27,7 +29,7 @@ public class Chip {
     public void draw(Canvas c){
 //        c.drawCircle(cellX,cellY,50,fillColor);
         fillColor.setColor(colors[colorNum]);
-        c.drawCircle(cell.getCenterX(), cell.getCenterY(),50, fillColor);
+        c.drawCircle(cell.getCenterX(), cell.getCenterY(),cell.getRectF().width()*0.4f, fillColor);
     }
 
 

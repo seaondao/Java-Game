@@ -88,8 +88,8 @@ public class TView extends View {
             yWidth = (h*0.8f)/10f; //30px
 
             //DO i even needs these cells?
-            cells = new Cell[9][10];
-            chip1 = new Chip(0,cells[0][0],false);
+            cells = new Cell[9][10]; // 9 10 or 10 9 ?
+
             for (int x = 0; x < 9; x++) {
                 //Going throw EACH ROW
                 for (int y = 0; y < 10; y++) {
@@ -114,7 +114,7 @@ public class TView extends View {
                     cells[x][y] = new Cell(x, y, rectF, color);
                 }
             }
-
+            chip1 = new Chip(0,cells[0][0],false);
 
 
         }
@@ -152,7 +152,7 @@ public class TView extends View {
 
         }
 
-//        chip1.draw(c);
+        chip1.draw(c);
 
 
     }
