@@ -5,26 +5,29 @@ import android.graphics.Color;
 import android.graphics.Paint;
 
 public class Chip {
-    private static Paint round;
-    private float chipX;
-    private float chipY;
-    private boolean kingChip;
+    private static Paint fillColor;
+    private int[] colors = {Color.WHITE, Color.BLACK};
+    private int colorNum; //Light or Dark 0 or 1
+    private boolean power;
+    private Cell cell;
 
 
     static {
-        round = new Paint();
-        round.setColor(Color.GREEN);
-        round.setStyle(Paint.Style.FILL);
+        fillColor = new Paint();
+        fillColor.setStyle(Paint.Style.FILL);
     }
 
-    public Chip(float x, float y, boolean king){
-        chipX = x;
-        chipY = y;
-        kingChip = king;
+    public Chip(int colorNum, Cell cell, boolean power){
+        this.colorNum = colorNum;
+        this.cell = cell;
+        this.power = power;
+
     }
 
     public void draw(Canvas c){
-
+//        c.drawCircle(cellX,cellY,50,fillColor);
+        fillColor.setColor(colors[colorNum]);
+        c.drawCircle(cell.getCenterX(), cell.getCenterY(),50, fillColor);
     }
 
 

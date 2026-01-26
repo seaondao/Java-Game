@@ -1,14 +1,17 @@
 package edu.byuh.cis.cs300.hello;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.os.Trace;
+import android.graphics.RectF;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Toast;
+
+//For debugging
+import android.util.Log;
+
 
 public class TView extends View {
 
@@ -19,6 +22,17 @@ public class TView extends View {
     private Paint lines;
     private Toast john;
     private Boolean firstDraw = true;
+
+    //Below here is test variables
+
+    private Chip chip1;
+    private Cell[][] cells;
+
+    private float bgBottom;
+    private float xWidth;
+    private float yWidth;
+
+    private RectF rectF;
 
     public TView(Context c) {
         super(c);
@@ -41,6 +55,23 @@ public class TView extends View {
     }
 
 
+    @Override
+    public boolean onTouchEvent(MotionEvent m){
+        if(m.getAction()==MotionEvent.ACTION_DOWN){
+            float x = m.getX();
+            float y = m.getY();
+            //It will tell you which row and column its been clicked.
+//            Toast t = Toast.makeText(getContext(),"Tapped at Column: " + (int)(x/xWidth) + " and Row: " + (int)(y/yWidth), Toast.LENGTH_SHORT);
+//            t.show();
+
+         Toast g = Toast.makeText(getContext()," Y " + y, Toast.LENGTH_SHORT);
+            g.show();
+
+        }
+
+        return true;
+    }
+
     @Override//**Main drawing part*/
     public void onDraw(Canvas c){
         c.drawColor(Color.GREEN);
@@ -50,10 +81,50 @@ public class TView extends View {
         if(firstDraw){
             lines.setStrokeWidth(w/100);
             firstDraw = false;
+
+            //Making invisible cells.
+
+            xWidth = w/9f; //Imagine 20px
+            yWidth = (h*0.8f)/10f; //30px
+
+            //DO i even needs these cells?
+            cells = new Cell[9][10];
+            chip1 = new Chip(0,cells[0][0],false);
+            for (int x = 0; x < 9; x++) {
+                //Going throw EACH ROW
+                for (int y = 0; y < 10; y++) {
+                    //Column in the each row.
+                    float left = x * xWidth;
+                    float top = y * yWidth;
+                    float right = left + xWidth;
+                    float bottom = top + yWidth;
+
+                    RectF rectF = new RectF(left, top, right, bottom);
+
+                    float[] lightX = {7,8,9};
+                    int color;
+                    if (x>5&& y<3) {//right top
+                        color = Team.LIGHT;
+                    } else if (x<3&& y>6) {//left bottom
+                        color = Team.DARK;
+                    }else{//others
+                        color = Team.NEUTRAL;
+                    }
+
+                    cells[x][y] = new Cell(x, y, rectF, color);
+                }
+            }
+
+
+
         }
+
         float bgLeft = 0;
         float bgTop = 0;
-        float bgBottom = (float)(h*0.8);
+        bgBottom = (float)(h*0.8);
+//        Log.d("TView", "Cell TEST X"+ cells[2][5].getCenterX() +" Y ; "+ cells[2][5].getCenterY());
+
+
 
         //**back groud*/
         c.drawRect(bgLeft,bgTop, w,bgBottom,bg);
@@ -76,10 +147,13 @@ public class TView extends View {
             //**Horizontal Lines*/
             c.drawLine(startX,startY+(i*yWidth),w,stopY+(i*yWidth),lines);
         }
-        for (int i = 0; i<9;i++){  //**Draw the X lines*/
+        for (int i = 0; i<10;i++){  //**Draw the X lines*/
             c.drawLine(startX+(i*xWidth),startY,startX+(i*xWidth),bgBottom,lines);
 
         }
+
+//        chip1.draw(c);
+
 
     }
 }
