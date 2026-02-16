@@ -2,6 +2,7 @@ package edu.byuh.cis.cs300.hello;
 
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.PointF;
 import android.graphics.RectF;
 import android.graphics.Canvas;
 
@@ -19,6 +20,11 @@ public class Cell {
     private boolean occupied;
 
     private Paint fillColor = new Paint();
+    private Paint border = new Paint();
+
+
+    static Boolean selectable = true;
+    static Cell selectedCell = null;
 
 
 
@@ -48,13 +54,26 @@ public class Cell {
         return rectF.centerY();
     }
 
+    /*
+        Check Leagal Moves
+        1. if this cell is not occupied
+        2. if this cell Color is not same as the chip team
+            SO it can'ty go in to the same team area.
+
+        Tell, Don’t Ask (Allen Holub) ??? ?? ??
+            1 Meaning full question is ok ?
+     */
     public boolean isLegalMove(Chip c){
-        return (!occupied&&color!=c.colorNum);//&& need some more conditions
+        return (!occupied&&color!=c.colorNum);
     }
 
 
     public Cell setOccupied() {
         this.occupied = true;
+        return this;
+    }
+    public Cell setFree(){
+        this.occupied = false;
         return this;
     }
 
@@ -66,11 +85,36 @@ public class Cell {
         return y;
     }
 
+    public PointF getPointF(){
+        return new PointF(getCenterX(),getCenterY());
+
+    }
+
+    /*
+    This draw is only for showing Moveable cell *Dot or something
+     */
     public void draw(Canvas c){
         if(Chip.selectedChip!= null){
+            //Circle
             fillColor.setStyle(Paint.Style.FILL);
-            fillColor.setColor(Color.RED);
+            fillColor.setColor(Color.rgb(255,20,147));
             c.drawCircle(getCenterX(),getCenterY(),getRectF().width()*0.3f,fillColor);
+
+            //Border lines
+            border.setStyle(Paint.Style.STROKE);
+            border.setColor(Color.RED);
+            border.setStrokeWidth(rectF.width()*0.05f);
+            c.drawRect(rectF,border );
         }
     }
+
+//    public Cell setSelected() {
+//        if(selectable && selectedCell == null){
+//            selectedCell = this;
+//        }else{
+//            selectable = false;
+//            selectedCell  = null;
+//        }
+//        return this; //TO get data from it
+//    }
 }

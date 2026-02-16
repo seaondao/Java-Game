@@ -5,6 +5,8 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.os.Message;
+import android.os.Handler;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Toast;
@@ -21,11 +23,10 @@ public class TView extends View {
     //**Variables for the back groud, and lines*/
     private static final String TAG = "TView";
     //field declarations
-    private Paint bg;
-    private Paint lGb;
-    private Paint rGb;
-    private Paint lines;
-    private Toast john;
+    private final Paint bg;
+    private final Paint lGb;
+    private final Paint rGb;
+    private final Paint lines;
     private Boolean firstDraw = true;
 
     //Below here is test variables
@@ -38,16 +39,35 @@ public class TView extends View {
     private Chip[] allChips;
     private Cell[][] cells;
 
-    private float bgBottom;
-    private float xWidth;
-    private float yWidth;
-
     private RectF rectF;
     ArrayList<Cell> legalMoves = new ArrayList<>();
+
+    boolean power = false;//The chip movingChip is a power or not.
+
+    Chip movingChip = null;//This is the Chip that is selected.
+    public boolean moving = false;
+
+    boolean unclick = true;
+
+    private Timer timer;
+
+    public class Timer extends Handler{
+        public Timer(){sendMessageDelayed(obtainMessage(),20);}
+
+        @Override
+        public void handleMessage(Message m){
+            if(movingChip != null){
+                movingChip = movingChip.animate();
+            }
+            invalidate();
+            sendMessageDelayed(obtainMessage(),20);
+        }
+    }
 
 
     public TView(Context c) {
         super(c);
+        timer = new Timer();
         //**setting the color for back groud and two rectangle  and lines*/
         bg = new Paint();
         bg.setColor(Color.rgb(210, 180, 140));/*Back groud for thr bord*/
@@ -59,149 +79,190 @@ public class TView extends View {
         lines.setColor(Color.BLACK);
         lines.setStyle(Paint.Style.STROKE);//**We did this in class*/
 
-        //**Class thing for the text that show up*/
-//        john = Toast.makeText(c,"CS 300 is my favorite class!", Toast.LENGTH_LONG);
+        //**Class thing for the text that show up*/ Toast example
+//        Toast john = Toast.makeText(c,"CS 300 is my favorite class!", Toast.LENGTH_LONG);
 //        john.show();
         firstDraw = true;
 
     }
 
 
+
     @Override
     public boolean onTouchEvent(MotionEvent m){
-        boolean power = false;
+
         if(m.getAction()==MotionEvent.ACTION_DOWN){
-            Chip movingChip = null;
 
             int x = (int) m.getX();
             int y = (int) m.getY();
 
-            for(Chip chip : darkChips){
+            /*
+            This Part check IF the Click was made in the Chip or Not
+                1. If the click is in any of the Chip "unclick" = false
+                2. If unclick is true until end, it goes to $if(unclick)
+             */
+            unclick = true;//Unclick Means cell was clicked and not the Chip
+
+            for(Chip chip : darkChips){// Loop throw to find if the click happend in the Chip.
                 if(chip.contains(x,y)){
-                    movingChip = chip.setSelected();
+                    movingChip = chip.setSelected(); // set new moving chip
                     power = movingChip.power;
+                    unclick = false;
                 }
             }
             for(Chip chip : lightChips){
                 if(chip.contains(x,y)){
                     movingChip = chip.setSelected();
                     power = movingChip.power;
+                    unclick = false;
                 }
             }
-
-            //CHECK WHICH SELL WAS CLIOCKED For LATER Maybe
-//            Cell clickedCell = null;
-//            for(int i = 0; i<9 ;i++){
-//                for(int j = 0; j<10 ; j++){
-//                    if (cells[i][j].contains(x,y)){
-//                        clickedCell = cells[i][j];
-//                    }
-//                }
-//            }
-//            if (clickedCell != null){ // I think I need this later
-//                Log.i(TAG, "Clicked Cell X : " + clickedCell.getX() + " and Y :"+clickedCell.getY());
-//
-//            }
-
-
-
-            //Only If  chip is selected
-            if(movingChip != null){
-                legalMoves.clear();//Clear everytime before looking for a moveable spot
-                int selectedCellX = movingChip.getCell().getX();
-                int selectedCellY = movingChip.getCell().getY();
-
-                //Which Cell(with Chip is selected)
-                Log.i(TAG, "X is : " +selectedCellX +"Y is "+ selectedCellY);
-
-
-                //Right
-                Cell candidate = null;
-                for(int i = selectedCellX+1; i< 9;i++){//Check Right
-                    if (cells[i][selectedCellY].isLegalMove(movingChip)) {
-                        if (!power){
-                            candidate = cells[i][selectedCellY];
-                        }else{
-                            legalMoves.add(cells[i][selectedCellY]);
+            /*
+                $if(unclick)
+                    Reset all(all fields that used for Moving Chip)
+                If Chip was clicked
+                    Check Moveable Position and save it to
+             */
+            boolean skip = false; //It will start moving if legal cell is clicked.
+            if(unclick){//Empty Cell was clicked Reset all.
+                if(movingChip != null){//Chip is selected and a cell was cliked
+                    for (Cell cell:legalMoves){//Loop throw the legal moves.
+                        if(cell.contains(x,y)){//Legal cell was selected.
+                            movingChip.setDestination(cell);
+                            skip = true;
                         }
-
-                    }else{
-                        break;
-                    }
-                }if(candidate != null){
-                        legalMoves.add(candidate);//Most right side that is able to go.
                     }
 
-                //Left
-                candidate = null;
-                for(int i = selectedCellX-1; i>=0;i--){//Check Right
-                    if (cells[i][selectedCellY].isLegalMove(movingChip)) {
-                        if (!power){
-                            candidate = cells[i][selectedCellY];
-                        }else{
-                            legalMoves.add(cells[i][selectedCellY]);
-                        }
-                    }else{
-                        break;
-                    }
-                }if(candidate != null){
-                    legalMoves.add(candidate);//Most right side that is able to go.
+                    Log.d(TAG, "Chip wants to move: ");
+                }
+                if(!skip){
+                    movingChip = null;
+                    Chip.reset();
                 }
 
-                //Down
-                candidate = null;
-                for(int i = selectedCellY+1; i< 10;i++){//Check Dwn
-                    if (cells[selectedCellX][i].isLegalMove(movingChip)) {
-                        if (!power){
-                            candidate = cells[selectedCellX][i];
-                        }else{
-                            legalMoves.add(cells[selectedCellX][i]);
-                        }
 
-                    }else{
-                        break;
-                    }
-                }if(candidate != null){
-                    legalMoves.add(candidate);//Most right side that is able to go.
-                }
-                //Top
-                candidate = null;
-                for(int i = selectedCellY-1; i>=0;i--){//Check Top
-                    if (cells[selectedCellX][i].isLegalMove(movingChip)) {
-                        if (!power){
-                            candidate = cells[selectedCellX][i];
-                        }else{
-                            legalMoves.add(cells[selectedCellX][i]);
-                        }
-                    }else{
-                        break;
-                    }
-                }if(candidate != null){
-                    legalMoves.add(candidate);//Most right side that is able to go.
-                }
-
-//                if(power){//Check diagonal //Right UP first
-//                    int i = selectedCellX+1;
-//                    int j = selectedCellY-1;
-//                    while (i<9 && j>0 ){
-//                        if(cells[i][j].isLegalMove(movingChip)){
-//                            legalMoves.add(cells[selectedCellX][i]);
-//                        }else{
-//                            break;
-//                        }
-//                        i++;
-//                        j--;
-//                    }
-//
-//                }
-
+            }else{
+                //Main Idea! check move able spots
+                checkMoveable(movingChip, power);
             }
 
+            //Here is when it draw the Legal moves.
             invalidate();
         }
         //Lets get which sell it belongs too.
         return true;
 
+    }
+
+    /*
+    *** Only When Chip is clicked call this
+    * 1. legalMoves Array list get Reset Everytime
+    * 2. Both Power and Non Power chip will Check Vertically and Horizontally
+    *   Power will save all possible candidate, Non P will only save the last one.
+    * 3. If Power Check Diagnol too
+    *
+     */
+    public void checkMoveable(Chip movingChip, boolean power){
+
+
+        legalMoves.clear();//Clear everytime before looking for a moveable spot
+        int selectedCellX = movingChip.getCell().getX();
+        int selectedCellY = movingChip.getCell().getY();
+
+
+        Cell candidate = null;
+
+
+
+        for(int i = selectedCellX+1; i< 9;i++){//Check Right
+            if (cells[i][selectedCellY].isLegalMove(movingChip)) {
+                if (!power){
+                    candidate = cells[i][selectedCellY];
+                }else{//If Power chip add all leagal moves
+                    legalMoves.add(cells[i][selectedCellY]);
+                }
+
+            }else{
+                break;
+            }
+        }
+        if(candidate != null){
+            legalMoves.add(candidate);//Most right side that is able to go.
+        }
+
+        //Left
+        candidate = null;
+        for(int i = selectedCellX-1; i>=0;i--){
+            if (cells[i][selectedCellY].isLegalMove(movingChip)) {
+                if (!power){
+                    candidate = cells[i][selectedCellY];
+                }else{
+                    legalMoves.add(cells[i][selectedCellY]);
+                }
+            }else{
+                break;
+            }
+        }if(candidate != null){
+            legalMoves.add(candidate);
+        }
+
+        //Down
+        candidate = null;
+        for(int i = selectedCellY+1; i< 10;i++){
+            if (cells[selectedCellX][i].isLegalMove(movingChip)) {
+                if (!power){
+                    candidate = cells[selectedCellX][i];
+                }else{
+                    legalMoves.add(cells[selectedCellX][i]);
+                }
+
+            }else{
+                break;
+            }
+        }if(candidate != null){
+            legalMoves.add(candidate);
+        }
+        //Top
+        candidate = null;
+        for(int i = selectedCellY-1; i>=0;i--){
+            if (cells[selectedCellX][i].isLegalMove(movingChip)) {
+                if (!power){
+                    candidate = cells[selectedCellX][i];
+                }else{
+                    legalMoves.add(cells[selectedCellX][i]);
+                }
+            }else{
+                break;
+            }
+        }if(candidate != null){
+            legalMoves.add(candidate);
+        }
+
+        if(power){//Check diagonal //Right UP first
+            int i = selectedCellX+1;
+            int j = selectedCellY-1;
+            while (i<9 && j>=0 ){
+                if(cells[i][j].isLegalMove(movingChip)){
+                    legalMoves.add(cells[i][j]);
+                }else{
+                    break;
+                }
+                i++;
+                j--;
+            }
+            i = selectedCellX-1;
+            j = selectedCellY+1;
+            while (i>=0 && j<9 ){
+                if(cells[i][j].isLegalMove(movingChip)){
+                    legalMoves.add(cells[i][j]);
+                }else{
+                    break;
+                }
+                i--;
+                j++;
+            }
+
+        }
     }
 
     @Override//**Main drawing part*/
@@ -215,8 +276,8 @@ public class TView extends View {
             firstDraw = false;
 
             /*Making invisible cells.*/
-            xWidth = w/9f; //Imagine 20px
-            yWidth = (h*0.8f)/10f; //30px
+            float xWidth = w / 9f; //Imagine 20px
+            float yWidth = (h * 0.8f) / 10f; //30px
 
             cells = new Cell[9][10]; //9 X and 10Y.
 
@@ -273,19 +334,19 @@ public class TView extends View {
         //**back groud*/
         float bgLeft = 0;
         float bgTop = 0;
-        bgBottom = (float)(h*0.8);
+        float bgBottom = (float) (h * 0.8);
 
-        c.drawRect(bgLeft,bgTop, w,bgBottom,bg);
+        c.drawRect(bgLeft,bgTop, w, bgBottom,bg);
         //**Variables for -----XY lines----*/
         float startX = 0;
         float startY = 0;
         float stopY = 0;
-        float yWidth = bgBottom/10;
+        float yWidth = bgBottom /10;
         float xWidth = w/9;
 
         //**Box Rect*/
         c.drawRect(xWidth*6,bgTop,w,yWidth*3,rGb);
-        c.drawRect(startX,yWidth*7,xWidth*3,bgBottom,lGb);
+        c.drawRect(startX,yWidth*7,xWidth*3, bgBottom,lGb);
 
         /*For both of them the first line will
         * be invisible since it starts at 0 its +1 times*/
@@ -294,7 +355,7 @@ public class TView extends View {
             c.drawLine(startX,startY+(i*yWidth),w,stopY+(i*yWidth),lines);
         }
         for (int i = 0; i<10;i++){  //**Draw the X lines*/
-            c.drawLine(startX+(i*xWidth),startY,startX+(i*xWidth),bgBottom,lines);
+            c.drawLine(startX+(i*xWidth),startY,startX+(i*xWidth), bgBottom,lines);
 
         }
 
@@ -303,6 +364,7 @@ public class TView extends View {
             lightChips[i].draw(c);
         }
 
+        //Loop cell that is leagal move and draw on that cell
         for(Cell cell : legalMoves){
             cell.draw(c);
         }
