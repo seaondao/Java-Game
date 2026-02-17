@@ -18,6 +18,7 @@ public class Chip {
     //This will not be changed.
     private static final int[] colors = {Color.BLACK,Color.rgb(173,216,230), Color.rgb(0,100,0)};
     public int colorNum; //Light or Dark 0 or 1
+    public int colorIndex;
     public boolean power;
     private Cell cell;
     private PointF center;
@@ -49,7 +50,13 @@ public class Chip {
     }
 
     private Chip(int colorNum, Cell cell, boolean power){
-        this.colorNum = colorNum;//0 or 1
+
+        if(colorNum == 1){
+            colorIndex = 1;
+        }else{
+            colorIndex = 2;
+        }
+        this.colorNum = colorNum;
         this.cell = cell;
         this.center = cell.getPointF();
         this.power = power;
@@ -78,7 +85,7 @@ public class Chip {
             c.drawCircle(center.x, center.y,cellWidth*0.5f, fillColor);
         }
 
-        fillColor.setColor(colors[colorNum]);
+        fillColor.setColor(colors[colorIndex]);
 //        Log.d(TAG, "Chip pointF X : " + center.x + " and " + center.x);
         c.drawCircle(center.x, center.y,cellWidth*0.4f, fillColor);
         c.drawCircle(center.x, center.y,cellWidth*0.4f, border);
@@ -102,40 +109,11 @@ public class Chip {
         }
         return this; //TO get data from it
     }
-
-    public void setDestination(Cell destination) {//Set Destination
-        this.destination = destination;
-
-        // Caluculate ABS (Destination X - Current X) /10 MOVE THIS AMOUT DO SAME FOR Y
-        //
-
-        float moveWidth =cellWidth;
-
-        float moveHeight = cellHeight;
-
-
-        //Check if the destination Direction.
-        if(cell.getX()>destination.getX()){//Destination X is smaller
-            velocity.x = -1*moveWidth;
-            Log.d(TAG, "Velocity X : " +velocity.x );
-        }else if(cell.getX()<destination.getX()){
-            velocity.x = 1*moveWidth;
-            Log.d(TAG, "Velocity X : " +velocity.x );
-        }
-        if(cell.getY()>destination.getY()){//Destination Y is smaller
-            velocity.y = -1*moveHeight;
-            Log.d(TAG, "Velocity Y : " +velocity.y );
-        }else if(cell.getY()<destination.getY()){
-            velocity.y = 1*moveHeight;
-            Log.d(TAG, "Velocity Y : " +velocity.y );
-        }
-
-    }
-
-    /*
+    /*reset
             1. ANY selected chip.selected = false
             2. Make selectedChip Null
          */
+
     static void reset(){
         if(selectedChip!=null){ //for  Null pointer Thing
             selectedChip.selected = false;
@@ -143,6 +121,38 @@ public class Chip {
         }
 
     }
+
+
+    /*
+        1. Set this chip's destination(Cell) to given destination (from loop the legal moves and legal cell was clicked)
+
+     */
+    public void setDestination(Cell destination) {//Set Destination
+        this.destination = destination;
+
+        // Caluculate ABS (Destination X - Current X) /10 MOVE THIS AMOUT DO SAME FOR Y
+        //
+
+        float moveWidth =cellWidth*0.6f;
+
+        float moveHeight = cellHeight*0.6f;
+
+
+        //Check if the destination Direction.
+        if(cell.getX()>destination.getX()){//Destination X is smaller
+            velocity.x = -1*moveWidth;
+        }else if(cell.getX()<destination.getX()){
+            velocity.x = 1*moveWidth;
+        }
+        if(cell.getY()>destination.getY()){//Destination Y is smaller
+            velocity.y = -1*moveHeight;
+        }else if(cell.getY()<destination.getY()){
+            velocity.y = 1*moveHeight;
+        }
+
+    }
+
+
 
     /*
         IF there is a destination
@@ -155,10 +165,15 @@ public class Chip {
             center.offset(velocity.x,velocity.y);
 //            Log.d(TAG, "current (X, Y): ( " + center.x + ", " + destination.getCenterX());
 
+
+            Log.d(TAG, "Velocity Y : " +(center.x-destination.getCenterX()) );
+            //We need the absolute value of how far is the current chip is from the destination.
+            //Absolute of (Current - Destination) = how far is it.
             if (Math.abs(center.x-destination.getCenterX()) < cellWidth && Math.abs(center.y-destination.getCenterY()) < cellWidth){
+
                 velocity.x = 0;
                 velocity.y = 0;
-                cell.setFree();
+                cell.setFree(); //not occupied anymore
                 cell = destination;
                 center = cell.getPointF();
                 destination = null;

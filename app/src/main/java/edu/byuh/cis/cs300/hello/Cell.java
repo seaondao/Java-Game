@@ -5,9 +5,12 @@ import android.graphics.Paint;
 import android.graphics.PointF;
 import android.graphics.RectF;
 import android.graphics.Canvas;
+import android.util.Log;
 
 
 public class Cell {
+    private static final String TAG = "Cell";
+
     private int x;/*2D array location of X and Y [9][10]*/
     private int y;
 
@@ -64,7 +67,14 @@ public class Cell {
             1 Meaning full question is ok ?
      */
     public boolean isLegalMove(Chip c){
-        return (!occupied&&color!=c.colorNum);
+        int currentColor = c.getCell().color;
+
+        if(currentColor!= 0){
+            return (!occupied && color == currentColor);
+        }else{
+            return (!occupied&&color!=c.colorNum);
+        }
+
     }
 
 

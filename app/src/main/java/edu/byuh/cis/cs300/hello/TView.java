@@ -52,7 +52,7 @@ public class TView extends View {
     private Timer timer;
 
     public class Timer extends Handler{
-        public Timer(){sendMessageDelayed(obtainMessage(),20);}
+        public Timer(){sendMessageDelayed(obtainMessage(),10);}
 
         @Override
         public void handleMessage(Message m){
@@ -60,7 +60,7 @@ public class TView extends View {
                 movingChip = movingChip.animate();
             }
             invalidate();
-            sendMessageDelayed(obtainMessage(),20);
+            sendMessageDelayed(obtainMessage(),10);
         }
     }
 
@@ -83,6 +83,7 @@ public class TView extends View {
 //        Toast john = Toast.makeText(c,"CS 300 is my favorite class!", Toast.LENGTH_LONG);
 //        john.show();
         firstDraw = true;
+
 
     }
 
@@ -123,6 +124,7 @@ public class TView extends View {
                 If Chip was clicked
                     Check Moveable Position and save it to
              */
+
             boolean skip = false; //It will start moving if legal cell is clicked.
             if(unclick){//Empty Cell was clicked Reset all.
                 if(movingChip != null){//Chip is selected and a cell was cliked
@@ -238,7 +240,7 @@ public class TView extends View {
             legalMoves.add(candidate);
         }
 
-        if(power){//Check diagonal //Right UP first
+        if(power){//Check diagonal //Right UP
             int i = selectedCellX+1;
             int j = selectedCellY-1;
             while (i<9 && j>=0 ){
@@ -249,16 +251,40 @@ public class TView extends View {
                 }
                 i++;
                 j--;
-            }
+            }//Left Down
             i = selectedCellX-1;
             j = selectedCellY+1;
-            while (i>=0 && j<9 ){
+            while (i>=0 && j<=9 ){
                 if(cells[i][j].isLegalMove(movingChip)){
                     legalMoves.add(cells[i][j]);
                 }else{
                     break;
                 }
                 i--;
+                j++;
+            }
+            //Left Top
+            i = selectedCellX-1;
+            j = selectedCellY-1;
+            while (i>=0 && j>=0 ){
+                if(cells[i][j].isLegalMove(movingChip)){
+                    legalMoves.add(cells[i][j]);
+                }else{
+                    break;
+                }
+                i--;
+                j--;
+            }
+            //Right Down
+            i = selectedCellX+1;
+            j = selectedCellY+1;
+            while (i<9 && j<=9 ){
+                if(cells[i][j].isLegalMove(movingChip)){
+                    legalMoves.add(cells[i][j]);
+                }else{
+                    break;
+                }
+                i++;
                 j++;
             }
 
@@ -316,13 +342,12 @@ public class TView extends View {
                     /*The 5th one is power chip
                      *No need new because its calling method.
                      * 'Simple Factory pattern'*/
-                    lightChips[i] = Chip.power(1,cells[i][i+1]);
-                    darkChips[i] = Chip.power(2,cells[i][i]);
-
+                    lightChips[i] = Chip.power(Team.LIGHT,cells[i][i+1]);
+                    darkChips[i] = Chip.power(Team.DARK,cells[i][i]);
 
                 }else{
-                    lightChips[i] = Chip.normal(1,cells[i][i+1]);
-                    darkChips[i] = Chip.normal(2,cells[i][i]);
+                    lightChips[i] = Chip.normal(Team.LIGHT,cells[i][i+1]);
+                    darkChips[i] = Chip.normal(Team.DARK,cells[i][i]);
 
                 }
 
