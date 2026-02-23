@@ -30,6 +30,8 @@ public class TView extends View {
     private final Paint lGb;
     private final Paint rGb;
     private final Paint lines;
+    private final Paint redball;
+
     private Boolean firstDraw = true;
 
     //Below here is test variables
@@ -59,6 +61,7 @@ public class TView extends View {
     //Stack
     private Stack<Move> undoStack = new Stack<>();
     Toast undoMsg;
+    private boolean undoed = false;//Check if undo happened or not.
 
 
 
@@ -76,19 +79,27 @@ public class TView extends View {
         }
     }
 
-    public void undoLastMove(){
+    public boolean undoLastMove(){
 
+        /*
+            When Undo is pressed move a little to the bottom just for fun
+       *Everytime some where that dose not have a chip was clicked it will unselect the chip so
+       didn't add that here.
+            1. Check if undoStack is empty or not if not empty, pop and save that as variable and go next
+            2. movingChip will be the chip that is in newest undoStack destination
+            3. That chip's destination becomes where it was before.
+            4. Animate that.
+         */
+        undoRect.offset(0,undoRect.height()*0.1f);
         if (!undoStack.empty()){
             Move m = undoStack.pop();
-            Log.d(TAG, "undoLastMove: ");
             movingChip = m.destination.chip;
             movingChip.setDestination(m.before);
             movingChip.animate();
-
         }else{//When undoStack is empty
             undoMsg.show();
         }
-
+        return true;
     }
 
 
@@ -108,23 +119,21 @@ public class TView extends View {
         lines = new Paint();
         lines.setColor(Color.BLACK);
         lines.setStyle(Paint.Style.STROKE);//**We did this in class*/
+        redball = new Paint();
+        redball.setColor(Color.RED);
 
         //**Class thing for the text that show up*/ Toast example
-//        Toast john = Toast.makeText(c,"CS 300 is my favorite class!", Toast.LENGTH_LONG);
-//        john.show();
-        undoMsg = Toast.makeText(c,"CS 300 is my favorite class!", Toast.LENGTH_LONG);
+        undoMsg = Toast.makeText(c,"No more UNDO to do ", Toast.LENGTH_LONG);
         firstDraw = true;
 
 
     }
 
-
-
     @Override
     public boolean onTouchEvent(MotionEvent m){
 
-        if(m.getAction()==MotionEvent.ACTION_DOWN){
 
+        if(m.getAction()==MotionEvent.ACTION_DOWN){
             int x = (int) m.getX();
             int y = (int) m.getY();
 
@@ -153,9 +162,11 @@ public class TView extends View {
             boolean skip = false; //It will start moving if legal cell is clicked.
             if(unclick){//Empty Cell was clicked Reset all.
                 if(movingChip != null){//Chip is selected and a cell was cliked
+
                     for (Cell cell:legalMoves){//Loop throw the legal moves.
                         if(cell.contains(x,y)){//Legal cell was selected.
-                            undoStack.add(new Move(movingChip.getCell(), cell));
+                            //add Move of (before, after) of where the chip moved.
+                            undoStack.push(new Move(movingChip.getCell(), cell));
                             movingChip.setDestination(cell);
                             skip = true;
                         }
@@ -174,11 +185,18 @@ public class TView extends View {
 
             if(undoRect.contains(x,y)){
                 undoLastMove();
+                undoed = true;//this is just to make the undo botton move.
             }
 
             //Here is when it draw the Legal moves.
-            invalidate();
+
         }
+        if(m.getAction()==MotionEvent.ACTION_UP&&undoed){//this is just to make the undo botton move.
+            //Undo happened and mouse up == make the undo botton location back.
+            undoRect.offset(0,-undoRect.height()*0.1f);
+            undoed = false;
+        }
+        invalidate();
         //Lets get which sell it belongs too.
         return true;
 
@@ -324,14 +342,11 @@ public class TView extends View {
         c.drawColor(Color.GREEN);
         float w = getWidth();
         float h = getHeight();
-        undoRect = new RectF(w * 0.8f, h * 0.85f,w * 0.8f+w * 0.15f,h * 0.85f +w * 0.15f);
-
 
         //**Only when it loads for the first time*/
         if (firstDraw) {
             lines.setStrokeWidth(w / 100);
             firstDraw = false;
-            int undoSize = (int) (w * 0.15f);
             /*Making invisible cells.*/
             float xWidth = w / 9f; //Imagine 20px
             float yWidth = (h * 0.8f) / 10f; //30px
@@ -387,8 +402,9 @@ public class TView extends View {
                 }
             }
             //UNDO IMG
-            undoSize = (int) (w * 0.15f);
+            int undoSize = (int) (w * 0.15f);
             undoImg = Bitmap.createScaledBitmap(undoImg, undoSize, undoSize, true);
+            undoRect = new RectF(w * 0.8f, h * 0.85f,w * 0.8f+w * 0.15f,h * 0.85f +w * 0.15f);
 
         }//FInish first only
 
