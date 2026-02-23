@@ -80,8 +80,11 @@ public class TView extends View {
 
         if (!undoStack.empty()){
             Move m = undoStack.pop();
+            Log.d(TAG, "undoLastMove: ");
+            movingChip = m.destination.chip;
+            movingChip.setDestination(m.before);
+            movingChip.animate();
 
-            Log.d(TAG, "undoLastMove: " + undoStack.size());
         }else{//When undoStack is empty
             undoMsg.show();
         }
@@ -416,7 +419,7 @@ public class TView extends View {
             c.drawLine(startX + (i * xWidth), startY, startX + (i * xWidth), bgBottom, lines);
 
         }
-        
+
         for(Chip chip : allChips){
             chip.draw(c);
         }

@@ -95,7 +95,7 @@ public class Chip {
             c.drawCircle(center.x, center.y,cellWidth*0.2f, fillColor);
 
         }
-        cell.setOccupied();
+        cell.setOccupied(this);
     }
 
     public Chip setSelected() {//Make sure player can't select more than 1 chip.

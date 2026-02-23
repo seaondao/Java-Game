@@ -29,6 +29,9 @@ public class Cell {
     static Boolean selectable = true;
     static Cell selectedCell = null;
 
+    public Chip chip;
+
+
     //Constructor
     public Cell(int x, int y, RectF rectF, int color){
         this.x = x;
@@ -36,6 +39,7 @@ public class Cell {
         this.rectF = rectF;
         this.color = color;
         this.occupied = false;
+        this.chip = null;
     }
 
 
@@ -79,8 +83,9 @@ public class Cell {
     }
 
 
-    public Cell setOccupied() {
+    public Cell setOccupied(Chip c) {
         this.occupied = true;
+        this.chip = c;
         return this;
     }
     public Cell setFree(){
