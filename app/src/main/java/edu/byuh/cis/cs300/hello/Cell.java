@@ -29,8 +29,6 @@ public class Cell {
     static Boolean selectable = true;
     static Cell selectedCell = null;
 
-
-
     //Constructor
     public Cell(int x, int y, RectF rectF, int color){
         this.x = x;
@@ -39,6 +37,9 @@ public class Cell {
         this.color = color;
         this.occupied = false;
     }
+
+
+
     public RectF getRectF() {
         return rectF;
     }

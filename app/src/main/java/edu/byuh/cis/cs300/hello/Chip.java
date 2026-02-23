@@ -169,6 +169,7 @@ public class Chip {
             Log.d(TAG, "Velocity Y : " +(center.x-destination.getCenterX()) );
             //We need the absolute value of how far is the current chip is from the destination.
             //Absolute of (Current - Destination) = how far is it.
+
             if (Math.abs(center.x-destination.getCenterX()) < cellWidth && Math.abs(center.y-destination.getCenterY()) < cellWidth){
 
                 velocity.x = 0;

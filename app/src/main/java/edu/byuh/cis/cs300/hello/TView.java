@@ -1,6 +1,8 @@
 package edu.byuh.cis.cs300.hello;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -16,6 +18,7 @@ import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Stack;
 
 
 public class TView extends View {
@@ -31,12 +34,9 @@ public class TView extends View {
 
     //Below here is test variables
 
-//    private Chip chip1;
 
-    private Chip[] darkChips;
-    private Chip[] lightChips;
+    private ArrayList<Chip> allChips;
 
-    private Chip[] allChips;
     private Cell[][] cells;
 
     private RectF rectF;
@@ -51,12 +51,24 @@ public class TView extends View {
 
     private Timer timer;
 
+    //IMAGE
+    private Bitmap undoImg;
+    private RectF undoRect;
+
+
+    //Stack
+    private Stack<Move> undoStack = new Stack<>();
+    Toast undoMsg;
+
+
+
     public class Timer extends Handler{
         public Timer(){sendMessageDelayed(obtainMessage(),10);}
 
         @Override
         public void handleMessage(Message m){
             if(movingChip != null){
+
                 movingChip = movingChip.animate();
             }
             invalidate();
@@ -64,10 +76,25 @@ public class TView extends View {
         }
     }
 
+    public void undoLastMove(){
+
+        if (!undoStack.empty()){
+            Move m = undoStack.pop();
+
+            Log.d(TAG, "undoLastMove: " + undoStack.size());
+        }else{//When undoStack is empty
+            undoMsg.show();
+        }
+
+    }
+
 
     public TView(Context c) {
         super(c);
         timer = new Timer();
+        //Creating undo img
+        undoImg = BitmapFactory.decodeResource(getResources(), R.drawable.undo);
+
         //**setting the color for back groud and two rectangle  and lines*/
         bg = new Paint();
         bg.setColor(Color.rgb(210, 180, 140));/*Back groud for thr bord*/
@@ -82,6 +109,7 @@ public class TView extends View {
         //**Class thing for the text that show up*/ Toast example
 //        Toast john = Toast.makeText(c,"CS 300 is my favorite class!", Toast.LENGTH_LONG);
 //        john.show();
+        undoMsg = Toast.makeText(c,"CS 300 is my favorite class!", Toast.LENGTH_LONG);
         firstDraw = true;
 
 
@@ -104,20 +132,14 @@ public class TView extends View {
              */
             unclick = true;//Unclick Means cell was clicked and not the Chip
 
-            for(Chip chip : darkChips){// Loop throw to find if the click happend in the Chip.
+            for(Chip chip : allChips){// Loop throw to find if the click happend in the Chip.
                 if(chip.contains(x,y)){
                     movingChip = chip.setSelected(); // set new moving chip
                     power = movingChip.power;
                     unclick = false;
                 }
             }
-            for(Chip chip : lightChips){
-                if(chip.contains(x,y)){
-                    movingChip = chip.setSelected();
-                    power = movingChip.power;
-                    unclick = false;
-                }
-            }
+
             /*
                 $if(unclick)
                     Reset all(all fields that used for Moving Chip)
@@ -130,12 +152,11 @@ public class TView extends View {
                 if(movingChip != null){//Chip is selected and a cell was cliked
                     for (Cell cell:legalMoves){//Loop throw the legal moves.
                         if(cell.contains(x,y)){//Legal cell was selected.
+                            undoStack.add(new Move(movingChip.getCell(), cell));
                             movingChip.setDestination(cell);
                             skip = true;
                         }
                     }
-
-                    Log.d(TAG, "Chip wants to move: ");
                 }
                 if(!skip){
                     movingChip = null;
@@ -146,6 +167,10 @@ public class TView extends View {
             }else{
                 //Main Idea! check move able spots
                 checkMoveable(movingChip, power);
+            }
+
+            if(undoRect.contains(x,y)){
+                undoLastMove();
             }
 
             //Here is when it draw the Legal moves.
@@ -292,15 +317,18 @@ public class TView extends View {
     }
 
     @Override//**Main drawing part*/
-    public void onDraw(Canvas c){
+    public void onDraw(Canvas c) {
         c.drawColor(Color.GREEN);
         float w = getWidth();
         float h = getHeight();
-        //**Only when it loads for the first time*/
-        if(firstDraw){
-            lines.setStrokeWidth(w/100);
-            firstDraw = false;
+        undoRect = new RectF(w * 0.8f, h * 0.85f,w * 0.8f+w * 0.15f,h * 0.85f +w * 0.15f);
 
+
+        //**Only when it loads for the first time*/
+        if (firstDraw) {
+            lines.setStrokeWidth(w / 100);
+            firstDraw = false;
+            int undoSize = (int) (w * 0.15f);
             /*Making invisible cells.*/
             float xWidth = w / 9f; //Imagine 20px
             float yWidth = (h * 0.8f) / 10f; //30px
@@ -318,13 +346,13 @@ public class TView extends View {
 
                     RectF rectF = new RectF(left, top, right, bottom);
 
-                    float[] lightX = {7,8,9};
+                    float[] lightX = {7, 8, 9};
                     int color;
-                    if (x>5&& y<3) {//right top
+                    if (x > 5 && y < 3) {//right top
                         color = Team.DARK;
-                    } else if (x<3&& y>6) {//left bottom
+                    } else if (x < 3 && y > 6) {//left bottom
                         color = Team.LIGHT;
-                    }else{//others
+                    } else {//others
                         color = Team.NEUTRAL;
                     }
 
@@ -334,25 +362,30 @@ public class TView extends View {
 
 
             //Making and drawing Chips
-            darkChips = new Chip[9];
-            lightChips =new Chip[9];
+            allChips = new ArrayList<>();
 
-            for (int i = 0; i<9;i++){
-                if(i==4){
-                    /*The 5th one is power chip
-                     *No need new because its calling method.
-                     * 'Simple Factory pattern'*/
-                    lightChips[i] = Chip.power(Team.LIGHT,cells[i][i+1]);
-                    darkChips[i] = Chip.power(Team.DARK,cells[i][i]);
+            int x=0;
+            //Making all chips array with first 8 is black and the rest is light
+            for (int i = 0; i < 18; i++){
 
+                if(i<9){
+                    if(i==4){
+                        allChips.add(Chip.power(Team.DARK, cells[i][i]));
+                    }else{
+                        allChips.add(Chip.normal(Team.DARK, cells[i][i]));
+                    }
                 }else{
-                    lightChips[i] = Chip.normal(Team.LIGHT,cells[i][i+1]);
-                    darkChips[i] = Chip.normal(Team.DARK,cells[i][i]);
-
+                    if(x==4){
+                        allChips.add(Chip.power(Team.LIGHT, cells[x][x + 1]));
+                    }else{
+                        allChips.add(Chip.normal(Team.LIGHT, cells[x][x + 1]));
+                    }
+                    x++;
                 }
-
-
             }
+            //UNDO IMG
+            undoSize = (int) (w * 0.15f);
+            undoImg = Bitmap.createScaledBitmap(undoImg, undoSize, undoSize, true);
 
         }//FInish first only
 
@@ -361,37 +394,41 @@ public class TView extends View {
         float bgTop = 0;
         float bgBottom = (float) (h * 0.8);
 
-        c.drawRect(bgLeft,bgTop, w, bgBottom,bg);
+        c.drawRect(bgLeft, bgTop, w, bgBottom, bg);
         //**Variables for -----XY lines----*/
         float startX = 0;
         float startY = 0;
         float stopY = 0;
-        float yWidth = bgBottom /10;
-        float xWidth = w/9;
+        float yWidth = bgBottom / 10;
+        float xWidth = w / 9;
 
         //**Box Rect*/
-        c.drawRect(xWidth*6,bgTop,w,yWidth*3,rGb);
-        c.drawRect(startX,yWidth*7,xWidth*3, bgBottom,lGb);
+        c.drawRect(xWidth * 6, bgTop, w, yWidth * 3, rGb);
+        c.drawRect(startX, yWidth * 7, xWidth * 3, bgBottom, lGb);
 
         /*For both of them the first line will
-        * be invisible since it starts at 0 its +1 times*/
-        for (int i = 0;i<11;i++){//Draw Y lines. 11 times because 10 + the last line for the bottom
+         * be invisible since it starts at 0 its +1 times*/
+        for (int i = 0; i < 11; i++) {//Draw Y lines. 11 times because 10 + the last line for the bottom
             //**Horizontal Lines*/
-            c.drawLine(startX,startY+(i*yWidth),w,stopY+(i*yWidth),lines);
+            c.drawLine(startX, startY + (i * yWidth), w, stopY + (i * yWidth), lines);
         }
-        for (int i = 0; i<10;i++){  //**Draw the X lines*/
-            c.drawLine(startX+(i*xWidth),startY,startX+(i*xWidth), bgBottom,lines);
+        for (int i = 0; i < 10; i++) {  //**Draw the X lines*/
+            c.drawLine(startX + (i * xWidth), startY, startX + (i * xWidth), bgBottom, lines);
 
         }
-
-        for (int i = 0 ; i<9;  i++){
-            darkChips[i].draw(c);
-            lightChips[i].draw(c);
+        
+        for(Chip chip : allChips){
+            chip.draw(c);
         }
 
         //Loop cell that is leagal move and draw on that cell
-        for(Cell cell : legalMoves){
+        for (Cell cell : legalMoves) {
             cell.draw(c);
         }
+
+        c.drawRect(undoRect, lines);
+        c.drawBitmap(undoImg, undoRect.left, undoRect.top, null);
+
     }
+
 }
