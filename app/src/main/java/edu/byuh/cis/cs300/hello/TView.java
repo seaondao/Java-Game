@@ -1,5 +1,7 @@
 package edu.byuh.cis.cs300.hello;
 
+import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -31,6 +33,7 @@ public class TView extends View {
     private final Paint rGb;
     private final Paint lines;
     private final Paint redball;
+    private final Paint textP;
 
     private Boolean firstDraw = true;
 
@@ -57,13 +60,18 @@ public class TView extends View {
     private Bitmap undoImg;
     private RectF undoRect;
 
+    private Bitmap duckImg;
+    private RectF duckRect;
+
 
     //Stack
     private Stack<Move> undoStack = new Stack<>();
     Toast undoMsg;
     private boolean undoed = false;//Check if undo happened or not.
+    private int currentPlayer;
 
-
+    private int winner;
+    private boolean animated = false;
 
     public class Timer extends Handler{
         public Timer(){sendMessageDelayed(obtainMessage(),10);}
@@ -71,16 +79,18 @@ public class TView extends View {
         @Override
         public void handleMessage(Message m){
             if(movingChip != null){
-
-                movingChip = movingChip.animate();
+                animated = movingChip.animate();
             }
             invalidate();
+            if(animated){
+                checkForWinner();
+                animated = false;
+            }
             sendMessageDelayed(obtainMessage(),10);
         }
     }
 
     public boolean undoLastMove(){
-
         /*
             When Undo is pressed move a little to the bottom just for fun
        *Everytime some where that dose not have a chip was clicked it will unselect the chip so
@@ -90,12 +100,14 @@ public class TView extends View {
             3. That chip's destination becomes where it was before.
             4. Animate that.
          */
+
         undoRect.offset(0,undoRect.height()*0.1f);
         if (!undoStack.empty()){
             Move m = undoStack.pop();
             movingChip = m.destination.chip;
             movingChip.setDestination(m.before);
             movingChip.animate();
+            currentPlayer *= -1;//Swich back the current team
         }else{//When undoStack is empty
             undoMsg.show();
         }
@@ -108,6 +120,7 @@ public class TView extends View {
         timer = new Timer();
         //Creating undo img
         undoImg = BitmapFactory.decodeResource(getResources(), R.drawable.undo);
+        duckImg = BitmapFactory.decodeResource(getResources(), R.drawable.duck);
 
         //**setting the color for back groud and two rectangle  and lines*/
         bg = new Paint();
@@ -121,6 +134,11 @@ public class TView extends View {
         lines.setStyle(Paint.Style.STROKE);//**We did this in class*/
         redball = new Paint();
         redball.setColor(Color.RED);
+        textP = new Paint();
+        textP.setColor(Color.BLACK);
+        textP.setTextSize(90);
+        textP.setTextAlign(Paint.Align.CENTER);
+        textP.setStyle(Paint.Style.FILL_AND_STROKE);
 
         //**Class thing for the text that show up*/ Toast example
         undoMsg = Toast.makeText(c,"No more UNDO to do ", Toast.LENGTH_LONG);
@@ -145,7 +163,8 @@ public class TView extends View {
             unclick = true;//Unclick Means cell was clicked and not the Chip
 
             for(Chip chip : allChips){// Loop throw to find if the click happend in the Chip.
-                if(chip.contains(x,y)){
+                //DEBIUG HERE FOR WINNING IF
+                if(chip.contains(x,y)){//&&chip.colorNum == currentPlayer
                     movingChip = chip.setSelected(); // set new moving chip
                     power = movingChip.power;
                     unclick = false;
@@ -159,7 +178,7 @@ public class TView extends View {
                     Check Moveable Position and save it to
              */
 
-            boolean skip = false; //It will start moving if legal cell is clicked.
+            boolean skip = false; //It will start moving if legal cell is clicked(true).
             if(unclick){//Empty Cell was clicked Reset all.
                 if(movingChip != null){//Chip is selected and a cell was cliked
 
@@ -169,6 +188,7 @@ public class TView extends View {
                             undoStack.push(new Move(movingChip.getCell(), cell));
                             movingChip.setDestination(cell);
                             skip = true;
+                            currentPlayer*= -1;
                         }
                     }
                 }
@@ -187,8 +207,12 @@ public class TView extends View {
                 undoLastMove();
                 undoed = true;//this is just to make the undo botton move.
             }
+            if(duckRect.contains(x,y)){
+                cheatCommand();
+            }
 
             //Here is when it draw the Legal moves.
+
 
         }
         if(m.getAction()==MotionEvent.ACTION_UP&&undoed){//this is just to make the undo botton move.
@@ -198,7 +222,42 @@ public class TView extends View {
         }
         invalidate();
         //Lets get which sell it belongs too.
+
+//        checkForWinner();
+        if(winner!=0){
+            var alert = new AlertDialog.Builder(getContext());
+            alert.setTitle("Congratuation Winner is : " + Team.getName(winner))
+                    .setCancelable(false)
+                    .setPositiveButton("Restart", (dialogInterface, i) -> firstDraw = true)
+                    .setNegativeButton("Quit", (dialogInterface, i) -> ((Activity)getContext()).finish());
+            AlertDialog box = alert.create();
+            box.show();
+        }
         return true;
+
+    }
+
+    private void checkForWinner() {
+        int light = 0;
+        int dark =0;
+
+        for (Chip c : allChips) {//If the team(cell that fills firsts,s opposite team is the winner
+            if(c.colorNum==1){
+                light+=c.getCell().getColor();
+
+            }else if(c.colorNum == -1){
+                dark += c.getCell().getColor();
+            }
+        }
+       if(light==-9){//Blue(Team Light win)
+           Log.d(TAG, "Winner is Team Blue: ");
+           winner = 1;
+
+       } else if (dark == 9) {
+           Log.d(TAG, "Winner is Team Green: ");
+           winner = -1;
+       }
+
 
     }
 
@@ -337,6 +396,14 @@ public class TView extends View {
         }
     }
 
+    public void cheatCommand(){
+        //Make one of the team win;
+        Log.d(TAG, "cheatCommand: ");
+        allChips.forEach(s -> { s.setDestination(cells[0][0]);
+        s.animate();});
+        invalidate();
+    }
+
     @Override//**Main drawing part*/
     public void onDraw(Canvas c) {
         c.drawColor(Color.GREEN);
@@ -406,6 +473,15 @@ public class TView extends View {
             undoImg = Bitmap.createScaledBitmap(undoImg, undoSize, undoSize, true);
             undoRect = new RectF(w * 0.8f, h * 0.85f,w * 0.8f+w * 0.15f,h * 0.85f +w * 0.15f);
 
+            duckImg = Bitmap.createScaledBitmap(duckImg, undoSize, undoSize, true);
+            duckRect = new RectF(w * 0.05f, h * 0.85f,w * 0.05f+w * 0.15f,h * 0.85f +w * 0.15f);
+
+
+            //End game
+            currentPlayer = Team.getRandomTeam();
+            Log.d(TAG, "onDraw: "+ currentPlayer);
+            winner = 0;
+
         }//FInish first only
 
         //**back groud*/
@@ -448,6 +524,19 @@ public class TView extends View {
         c.drawRect(undoRect, lines);
         c.drawBitmap(undoImg, undoRect.left, undoRect.top, null);
 
+        c.drawRect(duckRect,lines);
+        c.drawBitmap(duckImg, duckRect.left, duckRect.top, null);
+
+
+        //End game
+        c.drawText( Team.getName(currentPlayer) + "Team's turn.", w/2,h*0.85f,textP);
+
     }
 
-}
+
+
+
+
+
+    }
+

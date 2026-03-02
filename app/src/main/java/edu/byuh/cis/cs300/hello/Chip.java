@@ -17,7 +17,7 @@ public class Chip {
 
     //This will not be changed.
     private static final int[] colors = {Color.BLACK,Color.rgb(173,216,230), Color.rgb(0,100,0)};
-    public int colorNum; //Light or Dark 0 or 1
+    public int colorNum; //Light or Dark -1, 1
     public int colorIndex;
     public boolean power;
     private Cell cell;
@@ -133,9 +133,9 @@ public class Chip {
         // Caluculate ABS (Destination X - Current X) /10 MOVE THIS AMOUT DO SAME FOR Y
         //
 
-        float moveWidth =cellWidth*0.6f;
+        float moveWidth =cellWidth;
 
-        float moveHeight = cellHeight*0.6f;
+        float moveHeight = cellHeight;
 
 
         //Check if the destination Direction.
@@ -159,14 +159,11 @@ public class Chip {
         offset(the current location for that chip move in the velocity angle)
         if it gets near by change the current cell to there.
      */
-    public Chip animate(){// Make sure moving chip is still moving chhip untill moving is done.
+    public boolean animate(){// Make sure moving chip is still moving chhip untill moving is done.
 
         if(destination!= null){
             center.offset(velocity.x,velocity.y);
 //            Log.d(TAG, "current (X, Y): ( " + center.x + ", " + destination.getCenterX());
-
-
-            Log.d(TAG, "Velocity Y : " +(center.x-destination.getCenterX()) );
             //We need the absolute value of how far is the current chip is from the destination.
             //Absolute of (Current - Destination) = how far is it.
 
@@ -179,12 +176,12 @@ public class Chip {
                 center = cell.getPointF();
                 destination = null;
                 reset();
-                return null;
+                return true;
             }else{
-                return this;
+                return false;
             }
         }else {
-            return this;
+            return false;
         }
 
 

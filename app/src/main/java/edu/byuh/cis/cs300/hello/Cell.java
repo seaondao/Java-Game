@@ -101,6 +101,10 @@ public class Cell {
         return y;
     }
 
+    public int getColor() {
+        return color;
+    }
+
     public PointF getPointF(){
         return new PointF(getCenterX(),getCenterY());
 
