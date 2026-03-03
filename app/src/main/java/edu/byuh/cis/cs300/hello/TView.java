@@ -3,6 +3,7 @@ package edu.byuh.cis.cs300.hello;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -68,10 +69,12 @@ public class TView extends View {
     private Stack<Move> undoStack = new Stack<>();
     Toast undoMsg;
     private boolean undoed = false;//Check if undo happened or not.
-    private int currentPlayer;
 
+    //End game
+    private int currentPlayer;
     private int winner;
     private boolean animated = false;
+    private ArrayList<Chip> cheatChips = new ArrayList<>();
 
     public class Timer extends Handler{
         public Timer(){sendMessageDelayed(obtainMessage(),10);}
@@ -163,8 +166,8 @@ public class TView extends View {
             unclick = true;//Unclick Means cell was clicked and not the Chip
 
             for(Chip chip : allChips){// Loop throw to find if the click happend in the Chip.
-                //DEBIUG HERE FOR WINNING IF
-                if(chip.contains(x,y)){//&&chip.colorNum == currentPlayer
+                //Check that its the current player whos clicking.
+                if(chip.contains(x,y)&&chip.colorNum == currentPlayer){//
                     movingChip = chip.setSelected(); // set new moving chip
                     power = movingChip.power;
                     unclick = false;
@@ -181,14 +184,13 @@ public class TView extends View {
             boolean skip = false; //It will start moving if legal cell is clicked(true).
             if(unclick){//Empty Cell was clicked Reset all.
                 if(movingChip != null){//Chip is selected and a cell was cliked
-
                     for (Cell cell:legalMoves){//Loop throw the legal moves.
                         if(cell.contains(x,y)){//Legal cell was selected.
                             //add Move of (before, after) of where the chip moved.
                             undoStack.push(new Move(movingChip.getCell(), cell));
                             movingChip.setDestination(cell);
                             skip = true;
-                            currentPlayer*= -1;
+                            currentPlayer*= -1; //Swich the player
                         }
                     }
                 }
@@ -222,21 +224,19 @@ public class TView extends View {
         }
         invalidate();
         //Lets get which sell it belongs too.
-
-//        checkForWinner();
-        if(winner!=0){
-            var alert = new AlertDialog.Builder(getContext());
-            alert.setTitle("Congratuation Winner is : " + Team.getName(winner))
-                    .setCancelable(false)
-                    .setPositiveButton("Restart", (dialogInterface, i) -> firstDraw = true)
-                    .setNegativeButton("Quit", (dialogInterface, i) -> ((Activity)getContext()).finish());
-            AlertDialog box = alert.create();
-            box.show();
-        }
         return true;
 
     }
 
+    /*
+        Check for winner
+        Nutural cell has Number 0, Light is -1, Dark is 1
+        1. Add each chips current cell number for each team
+        2. if Light is -9 or Dark is 9 that means they win
+        3. set winner number to 1 or -1
+        4. if there is a winner make the alert dialog.
+
+     */
     private void checkForWinner() {
         int light = 0;
         int dark =0;
@@ -257,6 +257,23 @@ public class TView extends View {
            Log.d(TAG, "Winner is Team Green: ");
            winner = -1;
        }
+
+    if(winner!=0){
+        var alert = new AlertDialog.Builder(getContext());
+        alert.setTitle("Congratuation Winner is : " + Team.getName(winner))
+                .setCancelable(false)
+//                .setPositiveButton("Restart", (dialogInterface, i) -> firstDraw = true)
+                .setPositiveButton("Restart", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        firstDraw = true;
+                    }
+                })
+                .setNegativeButton("Quit", (dialogInterface, i) -> ((Activity)getContext()).finish());
+
+        AlertDialog box = alert.create();
+        box.show();
+    }
 
 
     }
@@ -396,12 +413,34 @@ public class TView extends View {
         }
     }
 
+    /*
+        I was lazy to check winner thing everytime so
+        I made this botton that if i click
+        1. ALl chip disaper
+        2. create Ligh team chips and place 8 of them in their team box
+        3. one left outside so move that once to win the game(it will also make the light team's turn)
+
+     */
     public void cheatCommand(){
         //Make one of the team win;
         Log.d(TAG, "cheatCommand: ");
-        allChips.forEach(s -> { s.setDestination(cells[0][0]);
-        s.animate();});
-        invalidate();
+
+
+        allChips.clear();
+
+
+        for(int y = 0; y<3;y++){
+            for(int x = 6; x<9;x++){
+                if(x==8&&y==2){
+                    allChips.add(Chip.power(Team.LIGHT, cells[8][5]));
+                }else{
+                    allChips.add(Chip.normal(Team.LIGHT, cells[x][y]));
+                }
+
+            }
+        }
+
+        currentPlayer = 1;
     }
 
     @Override//**Main drawing part*/
@@ -482,7 +521,8 @@ public class TView extends View {
             Log.d(TAG, "onDraw: "+ currentPlayer);
             winner = 0;
 
-        }//FInish first only
+        }
+        //FInish first only
 
         //**back groud*/
         float bgLeft = 0;
@@ -512,14 +552,22 @@ public class TView extends View {
 
         }
 
-        for(Chip chip : allChips){
-            chip.draw(c);
-        }
+//        for(Chip chip : allChips){
+//            chip.draw(c);
+//        }
+        //Cahnged to Consumer with Lamba
+        allChips.forEach(chip -> chip.draw(c));
+
 
         //Loop cell that is leagal move and draw on that cell
         for (Cell cell : legalMoves) {
             cell.draw(c);
         }
+        if(!cheatChips.isEmpty()){
+            cheatChips.forEach(cchip -> cchip.draw(c));
+        }
+
+
 
         c.drawRect(undoRect, lines);
         c.drawBitmap(undoImg, undoRect.left, undoRect.top, null);
