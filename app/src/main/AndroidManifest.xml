@@ -11,15 +11,28 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.CS300IsFun">
-        <activity
-            android:name=".MainActivity"
-            android:exported="true">
+        <activity android:name="edu.byuh.cis.cs300.fun.TitleScreen"
+            android:exported="true"
+            tools:ignore="MissingClass">
+
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:alwaysRetainTaskState="true"
+            android:screenOrientation="portrait"
+            android:name=".MainActivity"
+            android:exported="true">
+
+
+        </activity>
+
+
     </application>
 
 </manifest>
