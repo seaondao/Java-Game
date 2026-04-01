@@ -148,9 +148,6 @@ public class TView extends View {
 
             if(playMode == 2){
                 aiTeam = Team.DARK;
-                currentPlayer = 1;
-            }else{
-                aiTeam = Team.LIGHT;
             }
         }
 
@@ -242,7 +239,7 @@ public class TView extends View {
             boolean skip = false; //It will start moving if legal cell is clicked(true).
             if(unclick){//Empty Cell was clicked Reset all.
                 if(movingChip != null){//Chip is selected and a cell was cliked
-                    for (Cell cell:legalMoves){//Loop throw the legal moves.
+                    for (Cell cell : new ArrayList<>(legalMoves)){//Loop throw the legal moves.
                         if(cell.contains(x,y)){//Legal cell was selected.
                             //add Move of (before, after) of where the chip moved.
                             undoStack.push(new Move(movingChip.getCell(), cell));
@@ -250,6 +247,21 @@ public class TView extends View {
                             skip = true;
                             invalidate();
                             currentPlayer*= -1; //Swich the player
+                            if(playMode == 2 &&currentPlayer==-1){
+                                //Ai:s tern but make sure to wait untill the player move was done.
+                                if(movingChip != null){
+                                    while (!animated){
+                                        Log.d(TAG, "ANIMATING: ");
+                                        if(Prefs.getAnimation(getContext())){
+                                            animated = movingChip.animate();
+                                        }else {
+                                            animated = movingChip.teleport();
+                                        }
+                                    }
+                                }
+                                //once player move is done call ai movement.
+                                aiMove(currentPlayer);
+                            }
 
                         }
                     }
@@ -268,6 +280,7 @@ public class TView extends View {
             if(undoRect.contains(x,y)){
                 if(aiMode){
                     undoLastMove();
+                    undoRect.offset(0,-undoRect.height()*0.1f);
                 }
                 undoLastMove();
 
@@ -275,7 +288,7 @@ public class TView extends View {
             }
             if(duckRect.contains(x,y)){
 //                cheatCommand();
-                aiMove(true);
+                aiMove(currentPlayer);
 
             }
 
@@ -512,9 +525,18 @@ public class TView extends View {
         currentPlayer = 1;
     }
 
-    //TODO make ai mode and try it out
-    public void aiMove(boolean right) {
-        boolean teamRight = right;
+    //TODO make ai mode and try it out]
+    //Once its called It will check all chips legal moves and see if it is possible to
+    //GO in to the home? cell do it if not chose a randome chip that has a moveable
+    //and do a randome movement.
+    public void aiMove(int n) {
+        boolean teamRight;
+
+        if(n == -1){
+            teamRight = true;
+        }else{
+            teamRight = false;
+        }
 
         // for now first half is ai chips
         ArrayList<Chip> aiChips;
@@ -536,18 +558,13 @@ public class TView extends View {
             legalMoves.clear();
             checkMoveable(movingChip, power);
 
-            Log.d(TAG, "aiMove: legalMoves size = " + legalMoves.size());
+            ArrayList<Cell> movesCopy = new ArrayList<>(legalMoves);
 
-            for (Cell cell : legalMoves) {
-                int tempX = cell.getX();
-                int tempY = cell.getY();
 
-//                Log.d(TAG, "aiMove: x = " + tempX + " y = " + tempY);
-
-                // Example: if AI is on right side, try to move into color 1 area
+            for (Cell cell : movesCopy) {
+                //If you can go inside home go in the home cell
                 if (teamRight && cell.getColor() == 1 && movingChip.getCell().getColor() != 1) {
                     Log.d(TAG, "aiMove: It can go inside");
-
                     undoStack.push(new Move(movingChip.getCell(), cell));
                     movingChip.setDestination(cell);
                     movingChip.animate();
@@ -558,21 +575,7 @@ public class TView extends View {
                     break;
                 }
 
-                // Optional: if AI is on left side, try to move into color -1 area
-                if (!teamRight && cell.getColor() == -1 && movingChip.getCell().getColor() != -1) {
-                    Log.d(TAG, "aiMove: It can go inside");
-
-                    undoStack.push(new Move(movingChip.getCell(), cell));
-                    movingChip.setDestination(cell);
-                    movingChip.animate();
-                    currentPlayer *= -1;
-                    invalidate();
-
-                    moved = true;
-                    break;
-                }
             }
-
             if (moved) {
                 break;
             }
@@ -707,9 +710,7 @@ public class TView extends View {
 
             //End game
 //            currentPlayer = Team.getRandomTeam();
-            if(!aiMode){
-                currentPlayer = (int) Prefs.getOrder(getContext());
-            }
+            currentPlayer = (int) Prefs.getOrder(getContext());
 
             Chip.animationSpeed = Prefs.getAnimationSpeed(getContext());
             Log.d(TAG, "onDraw: "+ currentPlayer);
@@ -772,7 +773,10 @@ public class TView extends View {
 
         //End game
         c.drawText( Team.getName(currentPlayer) + "Team's turn.", w/2,h*0.85f,textP);
-
+        if(aiMode&&currentPlayer == -1){
+            Log.d(TAG, "DARK FIURSAT?: ");
+            aiMove(currentPlayer);
+        }
     }
 
 

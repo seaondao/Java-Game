@@ -136,9 +136,9 @@ public class Prefs extends AppCompatActivity {
             playModePref.setTitle("Chose Play mode");
             playModePref.setSummary("2 person, or One Person mode");
             playModePref.setKey(PLAY_MODE_PREF);
-            String[] modeEnt = {"Two Person", "Human (light) vs AI (dark)", "Human (dark) vs AI (light)"};
+            String[] modeEnt = {"Two Person", "Human (light) vs AI (dark)"};
             playModePref.setEntries(modeEnt);
-            String[] modeVal = {"1", "2","3"};
+            String[] modeVal = {"1", "2"};
             playModePref.setEntryValues(modeVal);
             playModePref.setDefaultValue("solo");
             screen.addPreference(playModePref);
