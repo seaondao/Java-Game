@@ -10,6 +10,8 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.health.connect.datatypes.units.Length;
+import android.media.MediaPlayer;
 import android.os.Message;
 import android.os.Handler;
 import android.view.MotionEvent;
@@ -20,8 +22,10 @@ import android.widget.Toast;
 import android.util.Log;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Stack;
+
+import edu.byuh.cis.cs300.hello.activity.Prefs;
+import edu.byuh.cis.cs300.hello.thems.Theme;
 
 
 public class TView extends View {
@@ -48,6 +52,10 @@ public class TView extends View {
     private RectF rectF;
     ArrayList<Cell> legalMoves = new ArrayList<>();
 
+    private MediaPlayer soundtrack;
+    private Theme theme;
+
+
     boolean power = false;//The chip movingChip is a power or not.
 
     Chip movingChip = null;//This is the Chip that is selected.
@@ -72,24 +80,37 @@ public class TView extends View {
 
     //End game
     private int currentPlayer;
-    private int winner;
+    private Team winner;
     private boolean animated = false;
     private ArrayList<Chip> cheatChips = new ArrayList<>();
 
+    //Play aginst AI
+    public int playMode;
+    public boolean aiMode = false;
+    public Team aiTeam;
+
+
     public class Timer extends Handler{
-        public Timer(){sendMessageDelayed(obtainMessage(),10);}
+        public Timer(){sendMessageDelayed(obtainMessage(),100);}
 
         @Override
         public void handleMessage(Message m){
+            //Check Preference if it wanted to be teleport or Animate
             if(movingChip != null){
-                animated = movingChip.animate();
+                if(Prefs.getAnimation(getContext())){
+                    animated = movingChip.animate();
+
+                }else {
+                    animated = movingChip.teleport();
+                }
+
             }
             invalidate();
             if(animated){
                 checkForWinner();
                 animated = false;
             }
-            sendMessageDelayed(obtainMessage(),10);
+            sendMessageDelayed(obtainMessage(),100);
         }
     }
 
@@ -120,6 +141,20 @@ public class TView extends View {
 
     public TView(Context c) {
         super(c);
+        theme = Prefs.getTheme(c);
+        playMode = Prefs.playModePref(getContext()); //1 2 or 3
+        if (playMode != 1) {
+            aiMode = true;
+
+            if(playMode == 2){
+                aiTeam = Team.DARK;
+                currentPlayer = 1;
+            }else{
+                aiTeam = Team.LIGHT;
+            }
+        }
+
+//        theme = new DarkTheme();
         timer = new Timer();
         //Creating undo img
         undoImg = BitmapFactory.decodeResource(getResources(), R.drawable.undo);
@@ -127,11 +162,11 @@ public class TView extends View {
 
         //**setting the color for back groud and two rectangle  and lines*/
         bg = new Paint();
-        bg.setColor(Color.rgb(210, 180, 140));/*Back groud for thr bord*/
+        bg.setColor(theme.getNutualColor());/*Back groud for thr bord*/
         lGb = new Paint();
-        lGb.setColor(Color.rgb(110, 70, 35));/*Left small box BG*/
+        lGb.setColor(theme.getTeamOneColor());/*Left small box BG*/
         rGb = new Paint();
-        rGb.setColor(Color.rgb(175, 125, 85));/*right side small box BG*/
+        rGb.setColor(theme.getTeamtwoColor());/*right side small box BG*/
         lines = new Paint();
         lines.setColor(Color.BLACK);
         lines.setStyle(Paint.Style.STROKE);//**We did this in class*/
@@ -143,11 +178,34 @@ public class TView extends View {
         textP.setTextAlign(Paint.Align.CENTER);
         textP.setStyle(Paint.Style.FILL_AND_STROKE);
 
+        if(Prefs.getSong(getContext())){
+            soundtrack = MediaPlayer.create(getContext(), R.raw.zhaytee_microcomposer_1);
+        }else{
+            soundtrack = MediaPlayer.create(getContext(), R.raw.retro);
+        }
+        soundtrack.setLooping(true);
+
         //**Class thing for the text that show up*/ Toast example
         undoMsg = Toast.makeText(c,"No more UNDO to do ", Toast.LENGTH_LONG);
         firstDraw = true;
 
 
+    }
+    public void justGotBackgrounded() {
+        //pause the music, stop animation, anything else?
+        if (Prefs.getMusicPref(getContext())) {
+            soundtrack.pause();
+        }
+    }
+
+    public void returningToForeground() {
+        if (Prefs.getMusicPref(getContext())) {
+            soundtrack.start();
+        }
+    }
+
+    public void prepareForShutdown() {
+        soundtrack.release();
     }
 
     @Override
@@ -162,7 +220,7 @@ public class TView extends View {
             This Part check IF the Click was made in the Chip or Not
                 1. If the click is in any of the Chip "unclick" = false
                 2. If unclick is true until end, it goes to $if(unclick)
-             */
+            */
             unclick = true;//Unclick Means cell was clicked and not the Chip
 
             for(Chip chip : allChips){// Loop throw to find if the click happend in the Chip.
@@ -190,7 +248,9 @@ public class TView extends View {
                             undoStack.push(new Move(movingChip.getCell(), cell));
                             movingChip.setDestination(cell);
                             skip = true;
+                            invalidate();
                             currentPlayer*= -1; //Swich the player
+
                         }
                     }
                 }
@@ -206,11 +266,17 @@ public class TView extends View {
             }
 
             if(undoRect.contains(x,y)){
+                if(aiMode){
+                    undoLastMove();
+                }
                 undoLastMove();
+
                 undoed = true;//this is just to make the undo botton move.
             }
             if(duckRect.contains(x,y)){
-                cheatCommand();
+//                cheatCommand();
+                aiMove(true);
+
             }
 
             //Here is when it draw the Legal moves.
@@ -249,44 +315,44 @@ public class TView extends View {
                 dark += c.getCell().getColor();
             }
         }
-       if(light==-9){//Blue(Team Light win)
-           Log.d(TAG, "Winner is Team Blue: ");
-           winner = 1;
+        if(light==-9){//Blue(Team Light win)
+            Log.d(TAG, "Winner is Team Blue: ");
+            winner = Team.LIGHT;
 
-       } else if (dark == 9) {
-           Log.d(TAG, "Winner is Team Green: ");
-           winner = -1;
-       }
+        } else if (dark == 9) {
+            Log.d(TAG, "Winner is Team Green: ");
+            winner = Team.DARK;
+        }
 
-    if(winner!=0){
-        var alert = new AlertDialog.Builder(getContext());
-        alert.setTitle("Congratuation Winner is : " + Team.getName(winner))
-                .setCancelable(false)
+        if(winner!=null){
+            var alert = new AlertDialog.Builder(getContext());
+            alert.setTitle("Congratuation Winner is : " + winner)
+                    .setCancelable(false)
 //                .setPositiveButton("Restart", (dialogInterface, i) -> firstDraw = true)
-                .setPositiveButton("Restart", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        firstDraw = true;
-                    }
-                })
-                .setNegativeButton("Quit", (dialogInterface, i) -> ((Activity)getContext()).finish());
+                    .setPositiveButton("Restart", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            firstDraw = true;
+                        }
+                    })
+                    .setNegativeButton("Quit", (dialogInterface, i) -> ((Activity)getContext()).finish());
 
-        AlertDialog box = alert.create();
-        box.show();
-    }
+            AlertDialog box = alert.create();
+            box.show();
+        }
 
 
     }
 
     /*
-    *** Only When Chip is clicked call this
-    * 1. legalMoves Array list get Reset Everytime
-    * 2. Both Power and Non Power chip will Check Vertically and Horizontally
-    *   Power will save all possible candidate, Non P will only save the last one.
-    * 3. If Power Check Diagnol too
-    *
+     *** Only When Chip is clicked call this
+     * 1. legalMoves Array list get Reset Everytime
+     * 2. Both Power and Non Power chip will Check Vertically and Horizontally
+     *   Power will save all possible candidate, Non P will only save the last one.
+     * 3. If Power Check Diagnol too
+     *
      */
-    public void checkMoveable(Chip movingChip, boolean power){
+    public int checkMoveable(Chip movingChip, boolean power){
 
 
         legalMoves.clear();//Clear everytime before looking for a moveable spot
@@ -411,6 +477,7 @@ public class TView extends View {
             }
 
         }
+        return legalMoves.size();
     }
 
     /*
@@ -440,12 +507,129 @@ public class TView extends View {
             }
         }
 
+
+
         currentPlayer = 1;
     }
 
+    //TODO make ai mode and try it out
+    public void aiMove(boolean right) {
+        boolean teamRight = right;
+
+        // for now first half is ai chips
+        ArrayList<Chip> aiChips;
+        if (aiTeam.equals(Team.DARK)) {
+            aiChips = new ArrayList<>(allChips.subList(0, 9));
+        } else {
+            aiChips = new ArrayList<>(allChips.subList(9, 18));
+        }
+
+        boolean moved = false;
+
+        // FIRST: check if any chip can move into its area
+        for (Chip c : aiChips) {
+            // Select chip
+            movingChip = c.setSelected();
+            power = movingChip.power;
+            unclick = false;
+
+            legalMoves.clear();
+            checkMoveable(movingChip, power);
+
+            Log.d(TAG, "aiMove: legalMoves size = " + legalMoves.size());
+
+            for (Cell cell : legalMoves) {
+                int tempX = cell.getX();
+                int tempY = cell.getY();
+
+//                Log.d(TAG, "aiMove: x = " + tempX + " y = " + tempY);
+
+                // Example: if AI is on right side, try to move into color 1 area
+                if (teamRight && cell.getColor() == 1 && movingChip.getCell().getColor() != 1) {
+                    Log.d(TAG, "aiMove: It can go inside");
+
+                    undoStack.push(new Move(movingChip.getCell(), cell));
+                    movingChip.setDestination(cell);
+                    movingChip.animate();
+                    currentPlayer *= -1;
+                    invalidate();
+
+                    moved = true;
+                    break;
+                }
+
+                // Optional: if AI is on left side, try to move into color -1 area
+                if (!teamRight && cell.getColor() == -1 && movingChip.getCell().getColor() != -1) {
+                    Log.d(TAG, "aiMove: It can go inside");
+
+                    undoStack.push(new Move(movingChip.getCell(), cell));
+                    movingChip.setDestination(cell);
+                    movingChip.animate();
+                    currentPlayer *= -1;
+                    invalidate();
+
+                    moved = true;
+                    break;
+                }
+            }
+
+            if (moved) {
+                break;
+            }
+        }
+
+        // SECOND: if no chip can go into its area, do random move
+        if (!moved) {
+            ArrayList<Chip> movableChips = new ArrayList<>();
+
+            // find chips that actually have legal moves
+            for (Chip c : aiChips) {
+                movingChip = c.setSelected();
+                power = movingChip.power;
+                unclick = false;
+
+                legalMoves.clear();
+                checkMoveable(movingChip, power);
+
+                if (!legalMoves.isEmpty()) {
+                    movableChips.add(c);
+                }
+            }
+
+            // choose random movable chip
+            if (!movableChips.isEmpty()) {
+                int x = (int) (Math.random() * movableChips.size());
+                movingChip = movableChips.get(x);
+
+                power = movingChip.power;
+                unclick = false;
+                legalMoves.clear();
+                checkMoveable(movingChip, power);
+
+                int random = (int) (Math.random() * legalMoves.size());
+                Log.d(TAG, "random move will " + random);
+
+                undoStack.push(new Move(movingChip.getCell(), legalMoves.get(random)));
+                movingChip.setDestination(legalMoves.get(random));
+                movingChip.animate();
+                currentPlayer *= -1;
+                invalidate();
+            }
+        }
+    }
+    //Random Move
+//        if(!legalMoves.isEmpty()){//Move able
+//            random = (int) (Math.random()* moveOption);
+//            Log.d(TAG, "randome will be: " + random);
+//            undoStack.push(new Move(movingChip.getCell(), legalMoves.get(random)));
+//            movingChip.setDestination(legalMoves.get(random));
+    ////            currentPlayer *= -1;
+//        }
+
     @Override//**Main drawing part*/
     public void onDraw(Canvas c) {
-        c.drawColor(Color.GREEN);
+        //BackGroundColor
+        c.drawColor(theme.getBackgrounfColor());
         float w = getWidth();
         float h = getHeight();
 
@@ -473,11 +657,11 @@ public class TView extends View {
                     float[] lightX = {7, 8, 9};
                     int color;
                     if (x > 5 && y < 3) {//right top
-                        color = Team.DARK;
+                        color = -1;
                     } else if (x < 3 && y > 6) {//left bottom
-                        color = Team.LIGHT;
+                        color = 1;
                     } else {//others
-                        color = Team.NEUTRAL;
+                        color = 0;
                     }
 
                     cells[x][y] = new Cell(x, y, rectF, color);
@@ -490,16 +674,18 @@ public class TView extends View {
 
             int x=0;
             //Making all chips array with first 8 is black and the rest is light
+            //TODO Make 3 way to make chips. Normal and ALl Power and No Power
+            int chipStyle = Prefs.getChipStylePref(getContext());
             for (int i = 0; i < 18; i++){
 
                 if(i<9){
-                    if(i==4){
+                    if((i==4&&chipStyle == 1)||chipStyle == 9){
                         allChips.add(Chip.power(Team.DARK, cells[i][i]));
                     }else{
                         allChips.add(Chip.normal(Team.DARK, cells[i][i]));
                     }
                 }else{
-                    if(x==4){
+                    if((x==4&&chipStyle == 1)||chipStyle == 9){
                         allChips.add(Chip.power(Team.LIGHT, cells[x][x + 1]));
                     }else{
                         allChips.add(Chip.normal(Team.LIGHT, cells[x][x + 1]));
@@ -507,6 +693,9 @@ public class TView extends View {
                     x++;
                 }
             }
+
+
+
             //UNDO IMG
             int undoSize = (int) (w * 0.15f);
             undoImg = Bitmap.createScaledBitmap(undoImg, undoSize, undoSize, true);
@@ -517,9 +706,14 @@ public class TView extends View {
 
 
             //End game
-            currentPlayer = Team.getRandomTeam();
+//            currentPlayer = Team.getRandomTeam();
+            if(!aiMode){
+                currentPlayer = (int) Prefs.getOrder(getContext());
+            }
+
+            Chip.animationSpeed = Prefs.getAnimationSpeed(getContext());
             Log.d(TAG, "onDraw: "+ currentPlayer);
-            winner = 0;
+            winner = null;
 
         }
         //FInish first only
@@ -586,5 +780,5 @@ public class TView extends View {
 
 
 
-    }
+}
 

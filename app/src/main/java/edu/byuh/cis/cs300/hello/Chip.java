@@ -25,6 +25,7 @@ public class Chip {
 
 
     private boolean selected;
+    private boolean highlighted;
 
     static Chip selectedChip;
 
@@ -32,6 +33,8 @@ public class Chip {
     private Cell destination;
     private float cellWidth;
     private float cellHeight;
+
+    public static float animationSpeed = 1;
 
 
     static {
@@ -42,21 +45,21 @@ public class Chip {
         border.setStyle(Paint.Style.STROKE);
         border.setStrokeWidth(5);
 
-
     }
 
     public Cell getCell() {
         return cell;
     }
 
-    private Chip(int colorNum, Cell cell, boolean power){
+    private Chip(Team team, Cell cell, boolean power){
 
-        if(colorNum == 1){
+        if(team == Team.LIGHT){
             colorIndex = 1;
+            colorNum = 1;
         }else{
             colorIndex = 2;
+            colorNum = -1;
         }
-        this.colorNum = colorNum;
         this.cell = cell;
         this.center = cell.getPointF();
         this.power = power;
@@ -65,11 +68,11 @@ public class Chip {
     }
 
     //We make 👆 private so belowe will call that
-    public static Chip normal(int colorNum, Cell cell){
-        return new Chip(colorNum,cell,false);
+    public static Chip normal(Team team, Cell cell){
+        return new Chip(team,cell,false);
     }
-    public static Chip power(int colorNum, Cell cell){
-        return new Chip(colorNum,cell,true);
+    public static Chip power(Team team, Cell cell){
+        return new Chip(team,cell,true);
     }
 
 
@@ -83,6 +86,10 @@ public class Chip {
         fillColor.setColor(Color.RED);
         if(selected){//#1 draw the border of the selected Chip
             c.drawCircle(center.x, center.y,cellWidth*0.5f, fillColor);
+        }
+        if(highlighted){//Only for debug
+            c.drawCircle(center.x, center.y,cellWidth*0.9f, fillColor);
+
         }
 
         fillColor.setColor(colors[colorIndex]);
@@ -109,6 +116,12 @@ public class Chip {
         }
         return this; //TO get data from it
     }
+
+    public Chip highLight(){
+        this.highlighted = true;
+        return this;
+    }
+
     /*reset
             1. ANY selected chip.selected = false
             2. Make selectedChip Null
@@ -133,9 +146,9 @@ public class Chip {
         // Caluculate ABS (Destination X - Current X) /10 MOVE THIS AMOUT DO SAME FOR Y
         //
 
-        float moveWidth =cellWidth;
+        float moveWidth =cellWidth*animationSpeed;
 
-        float moveHeight = cellHeight;
+        float moveHeight = cellHeight*animationSpeed;
 
 
         //Check if the destination Direction.
@@ -167,7 +180,7 @@ public class Chip {
             //We need the absolute value of how far is the current chip is from the destination.
             //Absolute of (Current - Destination) = how far is it.
 
-            if (Math.abs(center.x-destination.getCenterX()) < cellWidth && Math.abs(center.y-destination.getCenterY()) < cellWidth){
+            if (Math.abs(center.x-destination.getCenterX()) < cellWidth*animationSpeed && Math.abs(center.y-destination.getCenterY()) < cellHeight*animationSpeed){
 
                 velocity.x = 0;
                 velocity.y = 0;
@@ -183,11 +196,16 @@ public class Chip {
         }else {
             return false;
         }
-
-
-
-
-
+    }
+    public boolean teleport(){
+        if(destination!= null){
+            cell.setFree(); //not occupied anymore
+            cell = destination;
+            center = cell.getPointF();
+            destination = null;
+            reset();
+        }
+        return true;
     }
 
 
